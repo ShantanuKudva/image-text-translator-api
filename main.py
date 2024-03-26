@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Body
+from fastapi import FastAPI, File, UploadFile, Body, Form
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from pydantic import BaseModel
@@ -14,16 +14,17 @@ app.add_middleware(
     allow_headers=["*"], 
 )   
 
-# class RequestBody(BaseModel):
-#     fromLang: str
-#     toLang: str
-#     file: UploadFile = File(...)
+class RequestBody(BaseModel):
+    file: bytes = File(...)
+    fromLang: str
+    toLang: str
 
 
 @app.post("/upload")
-async def upload_file(file: bytes = File(...)):
+async def upload_file(file: bytes = File(...), fromLang: str = Form(...), toLang: str = Form(...)):
     image = Image.open(io.BytesIO(file))
-    image.show()
+    print(fromLang, toLang)
+    image.save(f'images/test.png')    
 
     return
 
@@ -32,9 +33,9 @@ async def upload_file(file: bytes = File(...)):
 # async def upload_file(request: RequestBody):
 #     print(request["fromLang"], request["toLang"])
 #     return
-    # image = Image.open(io.BytesIO(file.file.read()))
-    # with open(f'images/{file.filename}', 'wb') as f:
-    #     f.write(file.file.read())
-    # image.save(f'images/{file.filename}')
+#     image = Image.open(io.BytesIO(file.file.read()))
+#     # with open(f'images/{file.filename}', 'wb') as f:
+#     #     f.write(file.file.read())
+#     # image.save(f'images/{file.filename}')
 
-    # return {"filename": file.filename, "fromLang": fromLang, "toLang": toLang}
+#     # return {"filename": file.filename, "fromLang": fromLang, "toLang": toLang}
