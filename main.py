@@ -7,7 +7,6 @@ import cv2
 import numpy as np
 import sys
 import pytesseract
-import googletrans
 from googletrans import Translator
 from gtts import gTTS
 
@@ -288,7 +287,9 @@ def translateText(fromlang, toLang):
         extracted_text = text.replace('\n', ' ')
         extracted_text = extracted_text.replace('_', '')
         extracted_text = extracted_text.replace('|', '')
-        
+        extracted_text = extracted_text.replace('[', '')
+        extracted_text = extracted_text.replace(']', '')
+
         translator=Translator() 
         res = translator.translate(extracted_text, dest=toLang) # change dest value to "to_lang"
         print("\nres.text:\n",res.text)
