@@ -7,9 +7,9 @@ import cv2
 import numpy as np
 import sys
 import pytesseract
-import googletrans
 from googletrans import Translator
 from gtts import gTTS
+
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Users\vikas.LAPTOP-RRF59END\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
 
@@ -272,57 +272,59 @@ def ocr(fromlang):
         with open("textfile/img_text.txt", "w", encoding="utf-8") as f:
             f.write(text)
         # print(text)   
-        return
+        return text
         
     except Exception as e:
         print("Error on line {}".format(sys.exc_info()[-1].tb_lineno))
         return
 
 def translateText(fromlang, toLang):
-    with open('textfile/img_text.txt', 'r') as file:
-    # Read the contents of the file into a variable called text
-        text = file.read()
-# Print the contents of the text variable
-    print("Original Text:", text) 
+    try:
+        with open('textfile/img_text.txt', 'r', encoding='utf8') as file:
+            text = file.read()
+        print("Original Text:", text)
 
-    extracted_text = text.replace('\n', ' ')
-    extracted_text = extracted_text.replace('_', '')
-    extracted_text = extracted_text.replace('|', '')
-    
-    translator=Translator() 
-    detected_language = translator.detect(extracted_text).lang
-    print("Detected Language:", detected_language)
-    res = translator.translate(extracted_text, dest='kn')
-    print("\nres.text:\n",res.text)
-    
-    with open("textfile/translated_text.txt", "w", encoding="utf-8") as f:
-        f.write(res.text)
-    return res.text
+        extracted_text = text.replace('\n', ' ')
+        extracted_text = extracted_text.replace('_', '')
+        extracted_text = extracted_text.replace('|', '')
+        extracted_text = extracted_text.replace('[', '')
+        extracted_text = extracted_text.replace(']', '')
+
+        translator=Translator() 
+        res = translator.translate(extracted_text, dest=toLang) # change dest value to "to_lang"
+        print("\nres.text:\n",res.text)
+        
+        with open("textfile/translated_text.txt", "w", encoding="utf-8") as f:
+            f.write(res.text)
+        return res.text
+    except Exception as e:
+        print("An error occurred: ", sys.exc_info()[0])
+        raise
 
 
 @app.post("/upload")
 async def upload_file(file: bytes = File(...), fromLang: str = Form(...), toLang: str = Form(...)):
-    image = Image.open(io.BytesIO(file))
-    # print(fromLang, toLang)
-    
-    image.save(f'images/unsharpened_image.jpg')
-    # pre-processing fuunction
-    preprocessing()
-    ocr(ocr_dict[fromLang])
-    res = translateText(google_trans_dict[fromLang], google_trans_dict[toLang])
-
-  
-
-    return res
-
-
-# @app.post("/upload")
-# async def upload_file(request: RequestBody):
-#     print(request["fromLang"], request["toLang"])
-#     return
-#     image = Image.open(io.BytesIO(file.file.read()))
-#     # with open(f'images/{file.filename}', 'wb') as f:
-#     #     f.write(file.file.read())
-#     # image.save(f'images/{file.filename}')
-
-#     # return {"filename": file.filename, "fromLang": fromLang, "toLang": toLang}
+    try:
+        image = Image.open(io.BytesIO(file))
+        image.save(f'images/unsharpened_image.jpg')
+        preprocessing()
+        extracted = ocr(ocr_dict[fromLang])
+        extracted = extracted.replace('\n', ' ')
+        extracted = extracted.replace('_', '')
+        extracted = extracted.replace('|', '')
+        res = translateText(google_trans_dict[fromLang], google_trans_dict[toLang])
+        return {
+            "data": {
+                "translated_text": res,
+                "original_text": extracted
+            },
+            "status":200,
+            "message": "Message translated successfully"  
+        }
+    except Exception as e:
+        print(f"An error occurred: {e}", file=sys.stderr)
+        return {
+            "data": [],
+            "status": 500,
+            "message": "An error occurred while processing your request."
+        }
