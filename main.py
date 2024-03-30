@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Body, Form
+from fastapi import FastAPI, File, Form, WebSocket, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from pydantic import BaseModel
@@ -6,12 +6,14 @@ import io
 import cv2
 import numpy as np
 import sys
-import pytesseract
-import googletrans
-from googletrans import Translator
-from gtts import gTTS
+import base64
+import re
+# import pytesseract
+# import googletrans
+# from googletrans import Translator
+# from gtts import gTTS
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Users\vikas.LAPTOP-RRF59END\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+# pytesseract.pytesseract.tesseract_cmd = r'C:\Users\vikas.LAPTOP-RRF59END\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
 
 app = FastAPI()
 app.add_middleware( 
@@ -28,9 +30,9 @@ class RequestBody(BaseModel):
     toLang: str
 
     # pre-processing fuunction
-def preprocessing():
+def preprocessing(url):
     try:
-        ip_image=cv2.imread('images/unsharpened_image.jpg') 
+        ip_image=cv2.imread(url) 
         print(ip_image.shape)
         
         # cv2.imshow("frame received",ip_image)
@@ -261,9 +263,11 @@ google_trans_dict = {
 }
 
 
-def ocr(fromlang):
+
+
+def ocr(url, fromlang):
     try:
-        img = cv2.imread('images/unsharpened_image.jpg')
+        img = cv2.imread(url)
          # Perform OCR using pytesseract
         text = pytesseract.image_to_string(img, lang=fromlang)  # change lang value to "from_lang"
 
@@ -272,11 +276,13 @@ def ocr(fromlang):
         with open("textfile/img_text.txt", "w", encoding="utf-8") as f:
             f.write(text)
         # print(text)   
-        return
+        return text
         
     except Exception as e:
         print("Error on line {}".format(sys.exc_info()[-1].tb_lineno))
         return
+
+
 
 def translateText(fromlang, toLang):
     with open('textfile/img_text.txt', 'r') as file:
@@ -300,29 +306,54 @@ def translateText(fromlang, toLang):
     return res.text
 
 
+
+
 @app.post("/upload")
 async def upload_file(file: bytes = File(...), fromLang: str = Form(...), toLang: str = Form(...)):
-    image = Image.open(io.BytesIO(file))
-    # print(fromLang, toLang)
-    
-    image.save(f'images/unsharpened_image.jpg')
-    # pre-processing fuunction
-    preprocessing()
-    ocr(ocr_dict[fromLang])
-    res = translateText(google_trans_dict[fromLang], google_trans_dict[toLang])
+    try:
+        image = Image.open(io.BytesIO(file))
+        image.save(f'images/unsharpened_image.jpg')
+        text = preprocessing('images/unsharpened_image.jpg')
+        ocr('images/unsharpened_image.jpg',ocr_dict[fromLang])
+        res = translateText(google_trans_dict[fromLang], google_trans_dict[toLang])
 
-  
+        return {
+            "data": {
+                "translated_text": res,
+                "extracted_text": text,
+            },
+            "message": "Image saved successfully",
+            "status": 200
+        }
+    except Exception as e:
+        return {
+            "data": [],
+            "message": str(e),
+            "status": 500
+        }
 
-    return res
 
+@app.post("/camera")
+async def camera(file: bytes = File(...), fromLang: str = Form(...), toLang: str = Form(...)):
+    try:
+        image_data = file.decode('utf-8')[len('data:image/jpeg;base64,'):] 
+        img = Image.open(io.BytesIO(base64.b64decode(image_data)))
+        img.save('images/unsharpened_camera_image.jpg')
+        preprocessing('images/unsharpened_camera_image.jpg')
+        text = ocr('images/sharpened_image.jpg',ocr_dict[fromLang])
+        res = translateText(google_trans_dict[fromLang], google_trans_dict[toLang])
 
-# @app.post("/upload")
-# async def upload_file(request: RequestBody):
-#     print(request["fromLang"], request["toLang"])
-#     return
-#     image = Image.open(io.BytesIO(file.file.read()))
-#     # with open(f'images/{file.filename}', 'wb') as f:
-#     #     f.write(file.file.read())
-#     # image.save(f'images/{file.filename}')
-
-#     # return {"filename": file.filename, "fromLang": fromLang, "toLang": toLang}
+        return {
+            "data": {
+                "translated_text": res,
+                "extracted_text": text,
+            },
+            "message": "Image saved successfully",
+            "status": 200
+        }
+    except Exception as e:
+        return {
+            "data": [],
+            "message": str(e),
+            "status": 500
+        }
