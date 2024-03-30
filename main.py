@@ -30,26 +30,7 @@ class RequestBody(BaseModel):
     toLang: str
 
     # pre-processing fuunction
-def preprocessing(url):
-    try:
-        ip_image=cv2.imread(url) 
-        print(ip_image.shape)
-        
-        # cv2.imshow("frame received",ip_image)
-        cv2.waitKey(0)
 
-        # # Create the sharpening kernel 
-        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]]) 
-
-        # # Sharpen the image 
-        sharpened_image = cv2.filter2D(ip_image, -1, kernel) 
-        sharpened_image = cv2.filter2D(sharpened_image, -1, kernel) 
-        # #Save the image 
-        cv2.imwrite('images/sharpened_image.jpg', sharpened_image)
-        return
-    except Exception as e:
-        print("Error on line {}".format(sys.exc_info()[-1].tb_lineno))
-        return
     
 ocr_dict = {
     'Afrikaans': 'afr',
@@ -263,6 +244,26 @@ google_trans_dict = {
 }
 
 
+def preprocessing(url):
+    try:
+        ip_image=cv2.imread(url) 
+        print(ip_image.shape)
+        
+        # cv2.imshow("frame received",ip_image)
+        cv2.waitKey(0)
+
+        # # Create the sharpening kernel 
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]]) 
+
+        # # Sharpen the image 
+        sharpened_image = cv2.filter2D(ip_image, -1, kernel) 
+        sharpened_image = cv2.filter2D(sharpened_image, -1, kernel) 
+        # #Save the image 
+        cv2.imwrite('images/sharpened_image.jpg', sharpened_image)
+        return
+    except Exception as e:
+        print("Error on line {}".format(sys.exc_info()[-1].tb_lineno))
+        return
 
 
 def ocr(url, fromlang):
@@ -313,8 +314,8 @@ async def upload_file(file: bytes = File(...), fromLang: str = Form(...), toLang
     try:
         image = Image.open(io.BytesIO(file))
         image.save(f'images/unsharpened_image.jpg')
-        text = preprocessing('images/unsharpened_image.jpg')
-        ocr('images/unsharpened_image.jpg',ocr_dict[fromLang])
+        preprocessing('images/unsharpened_image.jpg')
+        text = ocr('images/unsharpened_image.jpg',ocr_dict[fromLang])
         res = translateText(google_trans_dict[fromLang], google_trans_dict[toLang])
 
         return {
