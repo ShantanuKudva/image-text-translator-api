@@ -314,7 +314,7 @@ async def upload_file(file: bytes = File(...), fromLang: str = Form(...), toLang
     try:
         image = Image.open(io.BytesIO(file))
         image.save(f'images/unsharpened_image.jpg')
-        preprocessing()
+        preprocessing('images/unsharpened_image.jpg')
         extracted = ocr(ocr_dict[fromLang])
         extracted = extracted.replace('\n', ' ')
         extracted = extracted.replace('_', '')
