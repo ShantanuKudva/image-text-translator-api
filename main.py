@@ -314,23 +314,26 @@ async def upload_file(file: bytes = File(...), fromLang: str = Form(...), toLang
     try:
         image = Image.open(io.BytesIO(file))
         image.save(f'images/unsharpened_image.jpg')
-        preprocessing('images/unsharpened_image.jpg')
-        text = ocr('images/unsharpened_image.jpg',ocr_dict[fromLang])
+        preprocessing()
+        extracted = ocr(ocr_dict[fromLang])
+        extracted = extracted.replace('\n', ' ')
+        extracted = extracted.replace('_', '')
+        extracted = extracted.replace('|', '')
         res = translateText(google_trans_dict[fromLang], google_trans_dict[toLang])
-
         return {
             "data": {
                 "translated_text": res,
-                "extracted_text": text,
+                "original_text": extracted
             },
-            "message": "Image saved successfully",
-            "status": 200
+            "status":200,
+            "message": "Message translated successfully"  
         }
     except Exception as e:
+        print(f"An error occurred: {e}", file=sys.stderr)
         return {
             "data": [],
-            "message": str(e),
-            "status": 500
+            "status": 500,
+            "message": "An error occurred while processing your request."
         }
 
 
@@ -341,13 +344,16 @@ async def camera(file: bytes = File(...), fromLang: str = Form(...), toLang: str
         img = Image.open(io.BytesIO(base64.b64decode(image_data)))
         img.save('images/unsharpened_camera_image.jpg')
         preprocessing('images/unsharpened_camera_image.jpg')
-        text = ocr('images/sharpened_image.jpg',ocr_dict[fromLang])
+        extracted = ocr(ocr_dict[fromLang])
+        extracted = extracted.replace('\n', ' ')
+        extracted = extracted.replace('_', '')
+        extracted = extracted.replace('|', '')
         res = translateText(google_trans_dict[fromLang], google_trans_dict[toLang])
 
         return {
             "data": {
                 "translated_text": res,
-                "extracted_text": text,
+                "extracted_text": extracted,
             },
             "message": "Image saved successfully",
             "status": 200
